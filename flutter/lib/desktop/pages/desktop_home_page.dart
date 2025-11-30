@@ -58,18 +58,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isIncomingOnly = bind.isIncomingOnly();
+    // 隐藏左侧区域，只显示右侧面板
     return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // 主内容区域 - 原右侧面板，现在放在左侧
-        if (!isIncomingOnly) Expanded(child: buildMainPane(context)),
-        if (!isIncomingOnly) const VerticalDivider(width: 1),
-        // 右侧面板 - 原左侧面板，现在放在右侧
-        buildRightPane(context),
-      ],
-    ));
+        child: buildRightPane(context)
+    );
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -77,25 +69,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         block: _block, mask: true, use: canBeBlocked, child: child);
   }
 
-  // 主内容区域 - 原右侧面板内容
-  Widget buildMainPane(BuildContext context) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
-    );
-  }
-
-  // 右侧面板 - 原左侧面板内容
+  // 右侧面板 - 原左侧面板内容，现在是唯一显示的面板
   Widget buildRightPane(BuildContext context) {
     final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (bind.isCustomClient())
-        Align(
-          alignment: Alignment.center,
-          child: loadPowered(context),
-        ),
+      // 移除由rustdesk提供技术支持的标识
       Align(
         alignment: Alignment.center,
         child: loadLogo(),
@@ -433,28 +413,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
-    if (!bind.isCustomClient() &&
-        updateUrl.isNotEmpty &&
-        !isCardClosed &&
-        bind.mainUriPrefixSync().contains('rustdesk')) {
-      final isToUpdate = (isWindows || isMacOS) && bind.mainIsInstalled();
-      String btnText = isToUpdate ? 'Update' : 'Download';
-      GestureTapCallback onPressed = () async {
-        final Uri url = Uri.parse('https://rustdesk.com/download');
-        await launchUrl(url);
-      };
-      if (isToUpdate) {
-        onPressed = () {
-          handleUpdate(updateUrl);
-        };
-      }
-      return buildInstallCard(
-          "Status",
-          "${translate("new-version-of-{${bind.mainGetAppNameSync()}}-tip")} (${bind.mainGetNewVersion()}).",
-          btnText,
-          onPressed,
-          closeButton: true);
-    }
+    // 移除rustdesk相关的更新提示
     if (systemError.isNotEmpty) {
       return buildInstallCard("", systemError, "", () {});
     }
