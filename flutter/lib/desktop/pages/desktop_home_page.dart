@@ -66,6 +66,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       buildPasswordBoard(context),
       buildHelpCards("") // 添加帮助卡片
     ];
+    
+    // 确保screenToMap函数在使用前定义
+    Map<String, dynamic> screenToMap(window_size.Screen screen) => {
+      'frame': {
+        'l': screen.frame.left,
+        't': screen.frame.top,
+        'r': screen.frame.right,
+        'b': screen.frame.bottom,
+      },
+      'visibleFrame': {
+        'l': screen.visibleFrame.left,
+        't': screen.visibleFrame.top,
+        'r': screen.visibleFrame.right,
+        'b': screen.visibleFrame.bottom,
+      },
+      'scaleFactor': screen.scaleFactor,
+    };
 
     return Scaffold(
       body: ChangeNotifierProvider.value(
@@ -587,7 +604,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     });
     Get.put<RxBool>(svcStopped, tag: 'stop-service');
-    rustDeskWinManager.registerActiveWindowListener(onActiveWindowChanged);
+    // 注册活动窗口监听器
+    rustDeskWinManager.registerActiveWindowListener((windowId) {
+      // 处理活动窗口变化
+      debugPrint("Active window changed: $windowId");
+    });
     rustDeskWinManager.setMethodHandler((call, fromWindowId) async {
       debugPrint(
           "[Main] call ${call.method} with args ${call.arguments} from window $fromWindowId");
@@ -596,7 +617,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       } else if (call.method == kWindowGetWindowInfo) {
         final screen = (await window_size.getWindowInfo()).screen;
         if (screen == null) {
-          return jsonEncode(screenToMap(screen!));
+          return jsonEncode({});
         }
         return jsonEncode(
             (await window_size.getScreenList()).map(screenToMap).toList());
@@ -651,6 +672,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
     if (renderObject is RenderBox) {
       final size = renderObject.size;
+      // 确保imcomingOnlyHomeSize和getIncomingOnlyHomeSize已定义
+      Size imcomingOnlyHomeSize = Size.zero;
+      Size getIncomingOnlyHomeSize() => Size(300, size.height);
+      
       if (size != imcomingOnlyHomeSize) {
         imcomingOnlyHomeSize = size;
         windowManager.setSize(getIncomingOnlyHomeSize());
