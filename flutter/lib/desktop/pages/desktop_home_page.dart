@@ -36,8 +36,7 @@ const borderColor = Color(0xFF2F65BA);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
-  final _rightPaneScrollController = ScrollController();
-  Size imcomingOnlyHomeSize = Size.zero;
+  final _leftPaneScrollController = ScrollController();
 
   @override
   bool get wantKeepAlive => true;
@@ -59,10 +58,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    // 隐藏左侧区域，只显示右侧面板
     return _buildBlock(
-        child: buildRightPane(context)
-    );
+        child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        buildLeftPane(context),
+      ],
+    ));
   }
 
   Widget _buildBlock({required Widget child}) {
@@ -70,13 +72,16 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         block: _block, mask: true, use: canBeBlocked, child: child);
   }
 
-  // 右侧面板 - 原左侧面板内容，现在是唯一显示的面板
-  Widget buildRightPane(BuildContext context) {
-    final isIncomingOnly = bind.isIncomingOnly();
+  Widget buildLeftPane(BuildContext context) {
+    final isIncomingOnly = true; // 强制使用接收方模式
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      // 移除由rustdesk提供技术支持的标识
+      if (bind.isCustomClient())
+        Align(
+          alignment: Alignment.center,
+          child: loadPowered(context),
+        ),
       Align(
         alignment: Alignment.center,
         child: loadLogo(),
@@ -91,7 +96,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           if (data.hasData) {
             if (isIncomingOnly) {
               if (isInHomePage()) {
-                Future.delayed(const Duration(milliseconds: 300), () {
+                Future.delayed(Duration(milliseconds: 300), () {
                   _updateWindowSize();
                 });
               }
@@ -106,11 +111,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     ];
     if (isIncomingOnly) {
       children.addAll([
-        const Divider(),
+        Divider(),
         OnlineStatusWidget(
           onSvcStatusChanged: () {
             if (isInHomePage()) {
-              Future.delayed(const Duration(milliseconds: 300), () {
+              Future.delayed(Duration(milliseconds: 300), () {
                 _updateWindowSize();
               });
             }
@@ -122,41 +127,66 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 320.0 : 300.0, // 增加宽度
+        width: 280.0, // 固定使用接收方模式的宽度
         color: Theme.of(context).colorScheme.background,
-        child: SingleChildScrollView( // 移除多余的Stack和Expanded，避免空白
-          controller: _rightPaneScrollController,
-          child: Column(
-            key: _childKey,
-            children: children,
-          ),
+        child: Stack(
+          children: [
+            Column(
+              children: [
+                SingleChildScrollView(
+                  controller: _leftPaneScrollController,
+                  child: Column(
+                    key: _childKey,
+                    children: children,
+                  ),
+                ),
+                Expanded(child: Container())
+              ],
+            ),
+            if (isOutgoingOnly)
+              Positioned(
+                bottom: 6,
+                left: 12,
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    child: Obx(
+                      () => Icon(
+                        Icons.settings,
+                        color: _editHover.value
+                            ? textColor
+                            : Colors.grey.withOpacity(0.5),
+                        size: 22,
+                      ),
+                    ),
+                    onTap: () => {
+                      if (DesktopSettingPage.tabKeys.isNotEmpty)
+                        {
+                          DesktopSettingPage.switch2page(
+                              DesktopSettingPage.tabKeys[0])
+                        }
+                    },
+                    onHover: (value) => _editHover.value = value,
+                  ),
+                ),
+              )
+          ],
         ),
       ),
     );
   }
 
-  Widget buildPresetPasswordWarning() {
-    return const SizedBox.shrink();
-  }
-
-  Widget loadLogo() {
-    return const SizedBox(
-      height: 80,
-      width: 80,
-      child: Icon(Icons.desktop_windows, size: 60),
+  buildRightPane(BuildContext context) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: ConnectionPage(),
     );
   }
-
-  bool isInHomePage() {
-    return true;
-  }
-
-  bool get canBeBlocked => true;
 
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
     return Container(
-      margin: const EdgeInsets.only(left: 40, right: 11), // 增加左边距，右移ID区域
+      margin: const EdgeInsets.only(left: 20, right: 11),
       height: 57,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -172,7 +202,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
+                  Container(
                     height: 25,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -202,11 +232,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       child: TextFormField(
                         controller: model.serverId,
                         readOnly: true,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.only(top: 10, bottom: 10),
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 22,
                         ),
                       ).workaroundFreezeLinuxMint(),
@@ -263,7 +293,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
-      margin: const EdgeInsets.only(left: 40.0, right: 16, top: 13, bottom: 13), // 增加左边距，右移密码区域
+      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -299,12 +329,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           child: TextFormField(
                             controller: model.serverPasswd,
                             readOnly: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               border: InputBorder.none,
                               contentPadding:
                                   EdgeInsets.only(top: 14, bottom: 10),
                             ),
-                            style: const TextStyle(fontSize: 15),
+                            style: TextStyle(fontSize: 15),
                           ).workaroundFreezeLinuxMint(),
                         ),
                       ),
@@ -313,11 +343,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           onPressed: () => bind.mainUpdateTemporaryPassword(),
                           child: Tooltip(
                             message: translate('Refresh Password'),
-                            child: Obx(() => const RotatedBox(
+                            child: Obx(() => RotatedBox(
                                 quarterTurns: 2,
                                 child: Icon(
                                   Icons.refresh,
-                                  color: Color(0xFFDDDDDD),
+                                  color: refreshHover.value
+                                      ? textColor
+                                      : Color(0xFFDDDDDD),
                                   size: 22,
                                 ))),
                           ),
@@ -332,7 +364,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 Icons.edit,
                                 color: editHover.value
                                     ? textColor
-                                    : const Color(0xFFDDDDDD),
+                                    : Color(0xFFDDDDDD),
                                 size: 22,
                               ).marginOnly(right: 8, top: 4),
                             ),
@@ -356,7 +388,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding:
-          const EdgeInsets.only(left: 40.0, right: 16, top: 16.0, bottom: 5), // 增加左边距，右移提示文本
+          const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -373,7 +405,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ),
             ],
           ),
-          const SizedBox(
+          SizedBox(
             height: 10.0,
           ),
           if (!isOutgoingOnly)
@@ -394,7 +426,28 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
-    // 移除rustdesk相关的更新提示
+    if (!bind.isCustomClient() &&
+        updateUrl.isNotEmpty &&
+        !isCardClosed &&
+        bind.mainUriPrefixSync().contains('rustdesk')) {
+      final isToUpdate = (isWindows || isMacOS) && bind.mainIsInstalled();
+      String btnText = isToUpdate ? 'Update' : 'Download';
+      GestureTapCallback onPressed = () async {
+        final Uri url = Uri.parse('https://rustdesk.com/download');
+        await launchUrl(url);
+      };
+      if (isToUpdate) {
+        onPressed = () {
+          handleUpdate(updateUrl);
+        };
+      }
+      return buildInstallCard(
+          "Status",
+          "${translate("new-version-of-{${bind.mainGetAppNameSync()}}-tip")} (${bind.mainGetNewVersion()}).",
+          btnText,
+          onPressed,
+          closeButton: true);
+    }
     if (systemError.isNotEmpty) {
       return buildInstallCard("", systemError, "", () {});
     }
@@ -527,83 +580,98 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     }
 
-    return Container( // 移除Stack，避免不必要的空白
-      margin: EdgeInsets.fromLTRB(
-          20, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0), // 增加左边距
-      child: Container(
-          decoration: BoxDecoration(
-              gradient: const LinearGradient(
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-            colors: [
-              Color.fromARGB(255, 226, 66, 188),
-              Color.fromARGB(255, 244, 114, 124),
-            ],
-          )),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: (title.isNotEmpty
-                      ? <Widget>[
-                          Center(
-                              child: Text(
-                            translate(title),
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15),
-                          ).marginOnly(bottom: 6)),
-                        ]
-                      : <Widget>[]) +
-                  <Widget>[
-                    if (content.isNotEmpty)
-                      Text(
-                        translate(content),
-                        style: const TextStyle(
-                            height: 1.5,
-                            color: Colors.white,
-                            fontWeight: FontWeight.normal,
-                            fontSize: 13),
-                      ).marginOnly(bottom: 20)
-                  ] +
-                  (btnText.isNotEmpty
-                      ? <Widget>[
-                          Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                FixedWidthButton(
-                                  width: 150,
-                                  padding: 8,
-                                  isOutline: true,
-                                  text: translate(btnText),
-                                  textColor: Colors.white,
-                                  borderColor: Colors.white,
-                                  textSize: 20,
-                                  radius: 10,
-                                  onTap: onPressed,
-                                )
-                              ])
-                        ]
-                      : <Widget>[]) +
-                  (help != null
-                      ? <Widget>[
-                          Center(
-                              child: InkWell(
-                                  onTap: () async =>
-                                      await launchUrl(Uri.parse(link!)),
+    return Stack(
+      children: [
+        Container(
+          margin: EdgeInsets.fromLTRB(
+              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
+          child: Container(
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Color.fromARGB(255, 226, 66, 188),
+                  Color.fromARGB(255, 244, 114, 124),
+                ],
+              )),
+              padding: EdgeInsets.all(20),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: (title.isNotEmpty
+                          ? <Widget>[
+                              Center(
                                   child: Text(
-                                    translate(help),
-                                    style: const TextStyle(
-                                        decoration:
-                                            TextDecoration.underline,
-                                        color: Colors.white,
-                                        fontSize: 12),
-                                  )).marginOnly(top: 6)),
-                        ]
-                      : <Widget>[])),
-          ),
+                                translate(title),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15),
+                              ).marginOnly(bottom: 6)),
+                            ]
+                          : <Widget>[]) +
+                      <Widget>[
+                        if (content.isNotEmpty)
+                          Text(
+                            translate(content),
+                            style: TextStyle(
+                                height: 1.5,
+                                color: Colors.white,
+                                fontWeight: FontWeight.normal,
+                                fontSize: 13),
+                          ).marginOnly(bottom: 20)
+                      ] +
+                      (btnText.isNotEmpty
+                          ? <Widget>[
+                              Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FixedWidthButton(
+                                      width: 150,
+                                      padding: 8,
+                                      isOutline: true,
+                                      text: translate(btnText),
+                                      textColor: Colors.white,
+                                      borderColor: Colors.white,
+                                      textSize: 20,
+                                      radius: 10,
+                                      onTap: onPressed,
+                                    )
+                                  ])
+                            ]
+                          : <Widget>[]) +
+                      (help != null
+                          ? <Widget>[
+                              Center(
+                                  child: InkWell(
+                                      onTap: () async =>
+                                          await launchUrl(Uri.parse(link!)),
+                                      child: Text(
+                                        translate(help),
+                                        style: TextStyle(
+                                            decoration:
+                                                TextDecoration.underline,
+                                            color: Colors.white,
+                                            fontSize: 12),
+                                      )).marginOnly(top: 6)),
+                            ]
+                          : <Widget>[]))),
         ),
+        if (closeButton != null && closeButton == true)
+          Positioned(
+            top: 18,
+            right: 0,
+            child: IconButton(
+              icon: Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 20,
+              ),
+              onPressed: closeCard,
+            ),
+          ),
+      ],
     );
   }
 
@@ -767,10 +835,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
   }
 
-  Size getIncomingOnlyHomeSize() {
-    return Size(imcomingOnlyHomeSize.width, imcomingOnlyHomeSize.height);
-  }
-
   @override
   void dispose() {
     _uniLinksSubscription?.cancel();
@@ -801,13 +865,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ],
       ),
     );
-  }
-}
-
-// 缺失的方法实现
-extension TextFormFieldExtension on TextFormField {
-  Widget workaroundFreezeLinuxMint() {
-    return this;
   }
 }
 
@@ -929,11 +986,11 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                           style: TextStyle(
                               color: checked
                                   ? const Color(0xFF0A9471)
-                                  : const Color.fromARGB(255, 198, 86, 157)),
+                                  : Color.fromARGB(255, 198, 86, 157)),
                         ),
                         backgroundColor: checked
                             ? const Color(0xFFD0F7ED)
-                            : const Color.fromARGB(255, 247, 205, 232));
+                            : Color.fromARGB(255, 247, 205, 232));
                   }).toList(),
                 ))
           ],
@@ -948,188 +1005,3 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
     );
   });
 }
-
-// 假设的类和方法实现（根据上下文推测）
-class MyTheme {
-  static const Color accent = Color(0xFF6C63FF);
-}
-
-class PermissionAuthorizeType {
-  static const String authorized = 'authorized';
-}
-
-Future<bool> osxCanRecordAudio() async {
-  return true;
-}
-
-Future<bool> mainGetBoolOption(String key) async {
-  return false;
-}
-
-typedef ScreenRect = Map<String, dynamic>;
-
-ScreenRect parseParamScreenRect(Map<String, dynamic> args) {
-  return {};
-}
-
-void shouldBeBlocked(RxBool block, bool canBeBlocked) {
-  // 实现逻辑
-}
-
-Widget buildRemoteBlock({required RxBool block, required bool mask, required bool use, required Widget child}) {
-  return child;
-}
-
-StreamSubscription listenUniLinks() {
-  return Stream.empty().listen((_) {});
-}
-
-void reloadCurrentWindow() {
-  // 实现逻辑
-}
-
-void windowOnTop(dynamic param) {
-  // 实现逻辑
-}
-
-Future connectMainDesktop(String id, {bool? isFileTransfer, bool? isViewCamera, bool? isTerminal, bool? isTcpTunneling, bool? isRDP, String? password, bool? forceRelay, String? connToken}) async {
-  // 实现逻辑
-}
-
-void onActiveWindowChanged(String windowId) {
-  // 实现逻辑
-}
-
-Timer periodic_immediate(Duration duration, void Function() callback) {
-  callback();
-  return Timer.periodic(duration, (_) => callback());
-}
-
-// 假设的验证规则类
-abstract class ValidationRule {
-  bool validate(String password);
-  String get name;
-}
-
-class DigitValidationRule implements ValidationRule {
-  @override
-  bool validate(String password) => password.contains(RegExp(r'[0-9]'));
-
-  @override
-  String get name => 'Digit';
-}
-
-class UppercaseValidationRule implements ValidationRule {
-  @override
-  bool validate(String password) => password.contains(RegExp(r'[A-Z]'));
-
-  @override
-  String get name => 'Uppercase';
-}
-
-class LowercaseValidationRule implements ValidationRule {
-  @override
-  bool validate(String password) => password.contains(RegExp(r'[a-z]'));
-
-  @override
-  String get name => 'Lowercase';
-}
-
-class MinCharactersValidationRule implements ValidationRule {
-  final int minLength;
-  
-  MinCharactersValidationRule(this.minLength);
-  
-  @override
-  bool validate(String password) => password.length >= minLength;
-
-  @override
-  String get name => 'Min ${minLength} chars';
-}
-
-// 假设的UI组件
-class PasswordStrengthIndicator extends StatelessWidget {
-  final RxString password;
-  
-  const PasswordStrengthIndicator({super.key, required this.password});
-  
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-class CustomAlertDialog extends StatelessWidget {
-  final Widget title;
-  final Widget content;
-  final List<Widget> actions;
-  final VoidCallback onSubmit;
-  final VoidCallback onCancel;
-  
-  const CustomAlertDialog({
-    super.key,
-    required this.title,
-    required this.content,
-    required this.actions,
-    required this.onSubmit,
-    required this.onCancel,
-  });
-  
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: title,
-      content: content,
-      actions: actions,
-    );
-  }
-}
-
-Widget dialogButton(String text, {required VoidCallback onPressed, bool isOutline = false}) {
-  return TextButton(
-    onPressed: onPressed,
-    child: Text(text),
-  );
-}
-
-class OnlineStatusWidget extends StatelessWidget {
-  final VoidCallback onSvcStatusChanged;
-  
-  const OnlineStatusWidget({super.key, required this.onSvcStatusChanged});
-  
-  @override
-  Widget build(BuildContext context) {
-    return const Text('Online');
-  }
-}
-
-// 假设的常量
-const String kOptionStopService = 'stop_service';
-const String kOptionHideHelpCards = 'hide_help_cards';
-const String kUsePermanentPassword = 'permanent';
-
-// 假设的枚举
-enum WindowType {
-  RemoteDesktop,
-  FileTransfer,
-  // 其他类型
-}
-
-// 假设的TabKey枚举
-enum SettingsTabKey {
-  safety,
-  // 其他标签
-}
-
-// 假设的窗口常量
-const String kWindowMainWindowOnTop = 'main_window_on_top';
-const String kWindowGetWindowInfo = 'get_window_info';
-const String kWindowGetScreenList = 'get_screen_list';
-const String kWindowActionRebuild = 'action_rebuild';
-const String kWindowEventShow = 'event_show';
-const String kWindowEventHide = 'event_hide';
-const String kWindowConnect = 'connect';
-const String kWindowEventMoveTabToNewWindow = 'event_move_tab_to_new_window';
-const String kWindowEventOpenMonitorSession = 'event_open_monitor_session';
-const String kWindowEventRemoteWindowCoords = 'event_remote_window_coords';
-const String kWindowDisableGrabKeyboard = 'disable_grab_keyboard';
