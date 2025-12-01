@@ -50,7 +50,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Timer? _updateTimer;
   bool isCardClosed = false;
 
-  final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
 
   final GlobalKey _childKey = GlobalKey();
@@ -77,18 +76,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     final children = <Widget>[
       if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      if (bind.isCustomClient())
-        Align(
-          alignment: Alignment.center,
-          child: loadPowered(context),
-        ),
       Align(
         alignment: Alignment.center,
         child: loadLogo(),
       ),
       buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
-      if (!isOutgoingOnly) buildPasswordBoard(context),
       FutureBuilder<Widget>(
         future: Future.value(
             Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
@@ -123,53 +116,21 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ).marginOnly(bottom: 6, right: 6)
       ]);
     }
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
         width: 280.0, // 固定使用接收方模式的宽度
         color: Theme.of(context).colorScheme.background,
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
-                  ),
-                ),
-                Expanded(child: Container())
-              ],
+            SingleChildScrollView(
+              controller: _leftPaneScrollController,
+              child: Column(
+                key: _childKey,
+                children: children,
+              ),
             ),
-            if (isOutgoingOnly)
-              Positioned(
-                bottom: 6,
-                left: 12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
-                        size: 22,
-                      ),
-                    ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
-                  ),
-                ),
-              )
+            Expanded(child: Container())
           ],
         ),
       ),
@@ -252,136 +213,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildPopupMenu(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    RxBool hover = false.obs;
-    return InkWell(
-      onTap: DesktopTabPage.onAddSetting,
-      child: Tooltip(
-        message: translate('Settings'),
-        child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background,
-            child: Icon(
-              Icons.more_vert_outlined,
-              size: 20,
-              color: hover.value ? textColor : textColor?.withOpacity(0.5),
-            ),
-          ),
-        ),
-      ),
-      onHover: (value) => hover.value = value,
-    );
+    // 移除设置按钮，返回空容器
+    return Container();
   }
 
   buildPasswordBoard(BuildContext context) {
-    return ChangeNotifierProvider.value(
-        value: gFFI.serverModel,
-        child: Consumer<ServerModel>(
-          builder: (context, model, child) {
-            return buildPasswordBoard2(context, model);
-          },
-        ));
+    // 移除密码面板，返回空容器
+    return Container();
   }
 
   buildPasswordBoard2(BuildContext context, ServerModel model) {
-    RxBool refreshHover = false.obs;
-    RxBool editHover = false.obs;
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    final showOneTime = model.approveMode != 'click' &&
-        model.verificationMethod != kUsePermanentPassword;
-    return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            height: 52,
-            decoration: BoxDecoration(color: MyTheme.accent),
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AutoSizeText(
-                    translate("One-time Password"),
-                    style: TextStyle(
-                        fontSize: 14, color: textColor?.withOpacity(0.5)),
-                    maxLines: 1,
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onDoubleTap: () {
-                            if (showOneTime) {
-                              Clipboard.setData(
-                                  ClipboardData(text: model.serverPasswd.text));
-                              showToast(translate("Copied"));
-                            }
-                          },
-                          child: TextFormField(
-                            controller: model.serverPasswd,
-                            readOnly: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding:
-                                  EdgeInsets.only(top: 14, bottom: 10),
-                            ),
-                            style: TextStyle(fontSize: 15),
-                          ).workaroundFreezeLinuxMint(),
-                        ),
-                      ),
-                      if (showOneTime)
-                        AnimatedRotationWidget(
-                          onPressed: () => bind.mainUpdateTemporaryPassword(),
-                          child: Tooltip(
-                            message: translate('Refresh Password'),
-                            child: Obx(() => RotatedBox(
-                                quarterTurns: 2,
-                                child: Icon(
-                                  Icons.refresh,
-                                  color: refreshHover.value
-                                      ? textColor
-                                      : Color(0xFFDDDDDD),
-                                  size: 22,
-                                ))),
-                          ),
-                          onHover: (value) => refreshHover.value = value,
-                        ).marginOnly(right: 8, top: 4),
-                      if (!bind.isDisableSettings())
-                        InkWell(
-                          child: Tooltip(
-                            message: translate('Change Password'),
-                            child: Obx(
-                              () => Icon(
-                                Icons.edit,
-                                color: editHover.value
-                                    ? textColor
-                                    : Color(0xFFDDDDDD),
-                                size: 22,
-                              ).marginOnly(right: 8, top: 4),
-                            ),
-                          ),
-                          onTap: () => DesktopSettingPage.switch2page(
-                              SettingsTabKey.safety),
-                          onHover: (value) => editHover.value = value,
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // 移除密码面板，返回空容器
+    return Container();
   }
 
   buildTip(BuildContext context) {
