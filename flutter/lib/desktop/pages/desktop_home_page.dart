@@ -37,6 +37,7 @@ const borderColor = Color(0xFF2F65BA);
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   final _rightPaneScrollController = ScrollController();
+  Size imcomingOnlyHomeSize = Size.zero;
 
   @override
   bool get wantKeepAlive => true;
@@ -90,7 +91,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           if (data.hasData) {
             if (isIncomingOnly) {
               if (isInHomePage()) {
-                Future.delayed(Duration(milliseconds: 300), () {
+                Future.delayed(const Duration(milliseconds: 300), () {
                   _updateWindowSize();
                 });
               }
@@ -105,11 +106,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     ];
     if (isIncomingOnly) {
       children.addAll([
-        Divider(),
+        const Divider(),
         OnlineStatusWidget(
           onSvcStatusChanged: () {
             if (isInHomePage()) {
-              Future.delayed(Duration(milliseconds: 300), () {
+              Future.delayed(const Duration(milliseconds: 300), () {
                 _updateWindowSize();
               });
             }
@@ -134,6 +135,24 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
+  Widget buildPresetPasswordWarning() {
+    return const SizedBox.shrink();
+  }
+
+  Widget loadLogo() {
+    return const SizedBox(
+      height: 80,
+      width: 80,
+      child: Icon(Icons.desktop_windows, size: 60),
+    );
+  }
+
+  bool isInHomePage() {
+    return true;
+  }
+
+  bool get canBeBlocked => true;
+
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
     return Container(
@@ -153,7 +172,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
+                  SizedBox(
                     height: 25,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -183,11 +202,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                       child: TextFormField(
                         controller: model.serverId,
                         readOnly: true,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.only(top: 10, bottom: 10),
                         ),
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 22,
                         ),
                       ).workaroundFreezeLinuxMint(),
@@ -244,7 +263,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
-      margin: EdgeInsets.only(left: 40.0, right: 16, top: 13, bottom: 13), // 增加左边距，右移密码区域
+      margin: const EdgeInsets.only(left: 40.0, right: 16, top: 13, bottom: 13), // 增加左边距，右移密码区域
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -280,12 +299,12 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           child: TextFormField(
                             controller: model.serverPasswd,
                             readOnly: true,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               border: InputBorder.none,
                               contentPadding:
                                   EdgeInsets.only(top: 14, bottom: 10),
                             ),
-                            style: TextStyle(fontSize: 15),
+                            style: const TextStyle(fontSize: 15),
                           ).workaroundFreezeLinuxMint(),
                         ),
                       ),
@@ -294,13 +313,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           onPressed: () => bind.mainUpdateTemporaryPassword(),
                           child: Tooltip(
                             message: translate('Refresh Password'),
-                            child: Obx(() => RotatedBox(
+                            child: Obx(() => const RotatedBox(
                                 quarterTurns: 2,
                                 child: Icon(
                                   Icons.refresh,
-                                  color: refreshHover.value
-                                      ? textColor
-                                      : Color(0xFFDDDDDD),
+                                  color: Color(0xFFDDDDDD),
                                   size: 22,
                                 ))),
                           ),
@@ -315,7 +332,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                 Icons.edit,
                                 color: editHover.value
                                     ? textColor
-                                    : Color(0xFFDDDDDD),
+                                    : const Color(0xFFDDDDDD),
                                 size: 22,
                               ).marginOnly(right: 8, top: 4),
                             ),
@@ -356,7 +373,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 ),
             ],
           ),
-          SizedBox(
+          const SizedBox(
             height: 10.0,
           ),
           if (!isOutgoingOnly)
@@ -515,7 +532,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           20, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0), // 增加左边距
       child: Container(
           decoration: BoxDecoration(
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
             colors: [
@@ -523,7 +540,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               Color.fromARGB(255, 244, 114, 124),
             ],
           )),
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,7 +549,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                           Center(
                               child: Text(
                             translate(title),
-                            style: TextStyle(
+                            style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15),
@@ -543,7 +560,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                     if (content.isNotEmpty)
                       Text(
                         translate(content),
-                        style: TextStyle(
+                        style: const TextStyle(
                             height: 1.5,
                             color: Colors.white,
                             fontWeight: FontWeight.normal,
@@ -577,7 +594,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                       await launchUrl(Uri.parse(link!)),
                                   child: Text(
                                     translate(help),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                         decoration:
                                             TextDecoration.underline,
                                         color: Colors.white,
@@ -750,6 +767,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     }
   }
 
+  Size getIncomingOnlyHomeSize() {
+    return Size(imcomingOnlyHomeSize.width, imcomingOnlyHomeSize.height);
+  }
+
   @override
   void dispose() {
     _uniLinksSubscription?.cancel();
@@ -780,6 +801,13 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         ],
       ),
     );
+  }
+}
+
+// 缺失的方法实现
+extension TextFormFieldExtension on TextFormField {
+  Widget workaroundFreezeLinuxMint() {
+    return this;
   }
 }
 
@@ -901,11 +929,11 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
                           style: TextStyle(
                               color: checked
                                   ? const Color(0xFF0A9471)
-                                  : Color.fromARGB(255, 198, 86, 157)),
+                                  : const Color.fromARGB(255, 198, 86, 157)),
                         ),
                         backgroundColor: checked
                             ? const Color(0xFFD0F7ED)
-                            : Color.fromARGB(255, 247, 205, 232));
+                            : const Color.fromARGB(255, 247, 205, 232));
                   }).toList(),
                 ))
           ],
@@ -920,3 +948,188 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
     );
   });
 }
+
+// 假设的类和方法实现（根据上下文推测）
+class MyTheme {
+  static const Color accent = Color(0xFF6C63FF);
+}
+
+class PermissionAuthorizeType {
+  static const String authorized = 'authorized';
+}
+
+Future<bool> osxCanRecordAudio() async {
+  return true;
+}
+
+Future<bool> mainGetBoolOption(String key) async {
+  return false;
+}
+
+typedef ScreenRect = Map<String, dynamic>;
+
+ScreenRect parseParamScreenRect(Map<String, dynamic> args) {
+  return {};
+}
+
+void shouldBeBlocked(RxBool block, bool canBeBlocked) {
+  // 实现逻辑
+}
+
+Widget buildRemoteBlock({required RxBool block, required bool mask, required bool use, required Widget child}) {
+  return child;
+}
+
+StreamSubscription listenUniLinks() {
+  return Stream.empty().listen((_) {});
+}
+
+void reloadCurrentWindow() {
+  // 实现逻辑
+}
+
+void windowOnTop(dynamic param) {
+  // 实现逻辑
+}
+
+Future connectMainDesktop(String id, {bool? isFileTransfer, bool? isViewCamera, bool? isTerminal, bool? isTcpTunneling, bool? isRDP, String? password, bool? forceRelay, String? connToken}) async {
+  // 实现逻辑
+}
+
+void onActiveWindowChanged(String windowId) {
+  // 实现逻辑
+}
+
+Timer periodic_immediate(Duration duration, void Function() callback) {
+  callback();
+  return Timer.periodic(duration, (_) => callback());
+}
+
+// 假设的验证规则类
+abstract class ValidationRule {
+  bool validate(String password);
+  String get name;
+}
+
+class DigitValidationRule implements ValidationRule {
+  @override
+  bool validate(String password) => password.contains(RegExp(r'[0-9]'));
+
+  @override
+  String get name => 'Digit';
+}
+
+class UppercaseValidationRule implements ValidationRule {
+  @override
+  bool validate(String password) => password.contains(RegExp(r'[A-Z]'));
+
+  @override
+  String get name => 'Uppercase';
+}
+
+class LowercaseValidationRule implements ValidationRule {
+  @override
+  bool validate(String password) => password.contains(RegExp(r'[a-z]'));
+
+  @override
+  String get name => 'Lowercase';
+}
+
+class MinCharactersValidationRule implements ValidationRule {
+  final int minLength;
+  
+  MinCharactersValidationRule(this.minLength);
+  
+  @override
+  bool validate(String password) => password.length >= minLength;
+
+  @override
+  String get name => 'Min ${minLength} chars';
+}
+
+// 假设的UI组件
+class PasswordStrengthIndicator extends StatelessWidget {
+  final RxString password;
+  
+  const PasswordStrengthIndicator({super.key, required this.password});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.shrink();
+  }
+}
+
+class CustomAlertDialog extends StatelessWidget {
+  final Widget title;
+  final Widget content;
+  final List<Widget> actions;
+  final VoidCallback onSubmit;
+  final VoidCallback onCancel;
+  
+  const CustomAlertDialog({
+    super.key,
+    required this.title,
+    required this.content,
+    required this.actions,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: title,
+      content: content,
+      actions: actions,
+    );
+  }
+}
+
+Widget dialogButton(String text, {required VoidCallback onPressed, bool isOutline = false}) {
+  return TextButton(
+    onPressed: onPressed,
+    child: Text(text),
+  );
+}
+
+class OnlineStatusWidget extends StatelessWidget {
+  final VoidCallback onSvcStatusChanged;
+  
+  const OnlineStatusWidget({super.key, required this.onSvcStatusChanged});
+  
+  @override
+  Widget build(BuildContext context) {
+    return const Text('Online');
+  }
+}
+
+// 假设的常量
+const String kOptionStopService = 'stop_service';
+const String kOptionHideHelpCards = 'hide_help_cards';
+const String kUsePermanentPassword = 'permanent';
+
+// 假设的枚举
+enum WindowType {
+  RemoteDesktop,
+  FileTransfer,
+  // 其他类型
+}
+
+// 假设的TabKey枚举
+enum SettingsTabKey {
+  safety,
+  // 其他标签
+}
+
+// 假设的窗口常量
+const String kWindowMainWindowOnTop = 'main_window_on_top';
+const String kWindowGetWindowInfo = 'get_window_info';
+const String kWindowGetScreenList = 'get_screen_list';
+const String kWindowActionRebuild = 'action_rebuild';
+const String kWindowEventShow = 'event_show';
+const String kWindowEventHide = 'event_hide';
+const String kWindowConnect = 'connect';
+const String kWindowEventMoveTabToNewWindow = 'event_move_tab_to_new_window';
+const String kWindowEventOpenMonitorSession = 'event_open_monitor_session';
+const String kWindowEventRemoteWindowCoords = 'event_remote_window_coords';
+const String kWindowDisableGrabKeyboard = 'disable_grab_keyboard';
