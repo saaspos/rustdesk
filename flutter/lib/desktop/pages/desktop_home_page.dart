@@ -60,117 +60,36 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     super.build(context);
     // 只显示左侧面板，隐藏右侧面板
     return _buildBlock(
-        child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        buildLeftPane(context),
-        // 移除右侧面板相关代码
-        // if (!isIncomingOnly) const VerticalDivider(width: 1),
-        // if (!isIncomingOnly) Expanded(child: buildRightPane(context)),
-      ],
+        child: Container(
+      width: double.infinity,
+      height: double.infinity,
+      padding: EdgeInsets.all(20),
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: buildLeftPane(context),
     ));
   }
 
   Widget _buildBlock({required Widget child}) {
-    return buildRemoteBlock(
-        block: _block, mask: true, use: canBeBlocked, child: child);
+    // 简化block逻辑，直接返回子组件
+    return child;
   }
 
   Widget buildLeftPane(BuildContext context) {
-    final isIncomingOnly = bind.isIncomingOnly();
     final isOutgoingOnly = bind.isOutgoingOnly();
+    // 只保留ID区域
     final children = <Widget>[
-      if (!isOutgoingOnly) buildPresetPasswordWarning(),
-      // Removed "Powered by RustDesk" text
-      Align(
-        alignment: Alignment.center,
-        child: loadLogo(),
-      ),
-      buildTip(context),
       if (!isOutgoingOnly) buildIDBoard(context),
-      // Removed password board
-      FutureBuilder<Widget>(
-        future: Future.value(
-            Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
-        builder: (_, data) {
-          if (data.hasData) {
-            if (isIncomingOnly) {
-              if (isInHomePage()) {
-                Future.delayed(Duration(milliseconds: 300), () {
-                  _updateWindowSize();
-                });
-              }
-            }
-            return data.data!;
-          } else {
-            return const Offstage();
-          }
-        },
-      ),
-      buildPluginEntry(),
     ];
-    if (isIncomingOnly) {
-      children.addAll([
-        Divider(),
-        OnlineStatusWidget(
-          onSvcStatusChanged: () {
-            if (isInHomePage()) {
-              Future.delayed(Duration(milliseconds: 300), () {
-                _updateWindowSize();
-              });
-            }
-          },
-        ).marginOnly(bottom: 6, right: 6)
-      ]);
-    }
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
+    
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        width: 280.0, // 使用固定宽度
         color: Theme.of(context).colorScheme.background,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                SingleChildScrollView(
-                  controller: _leftPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
-                  ),
-                ),
-                Expanded(child: Container())
-              ],
-            ),
-            if (isOutgoingOnly)
-              Positioned(
-                bottom: 6,
-                left: 12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
-                        size: 22,
-                      ),
-                    ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
-                  ),
-                ),
-              )
-          ],
+        padding: EdgeInsets.all(20), // 添加内边距
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center, // 居中对齐
+          children: children,
         ),
       ),
     );
@@ -186,66 +105,70 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
-      height: 57,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.baseline,
-        textBaseline: TextBaseline.alphabetic,
-        children: [
-          Container(
-            width: 2,
-            decoration: const BoxDecoration(color: MyTheme.accent),
-          ).marginOnly(top: 5),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 7),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 25,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          translate("ID"),
-                          style: TextStyle(
-                              fontSize: 14,
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .titleLarge
-                                  ?.color
-                                  ?.withOpacity(0.5)),
-                        ).marginOnly(top: 5),
-                        // Removed settings button
-                      ],
-                    ),
-                  ),
-                  Flexible(
-                    child: GestureDetector(
-                      onDoubleTap: () {
-                        Clipboard.setData(
-                            ClipboardData(text: model.serverId.text));
-                        showToast(translate("Copied"));
-                      },
-                      child: TextFormField(
-                        controller: model.serverId,
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(top: 10, bottom: 10),
-                        ),
-                        style: TextStyle(
-                          fontSize: 22,
-                        ),
-                      ).workaroundFreezeLinuxMint(),
-                    ),
-                  )
-                ],
-              ),
-            ),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Theme.of(context).cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            translate("Your ID"),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.titleLarge?.color,
+            ),
+            textAlign: TextAlign.center,
+          ).marginOnly(bottom: 16),
+          GestureDetector(
+            onDoubleTap: () {
+              Clipboard.setData(ClipboardData(text: model.serverId.text));
+              showToast(translate("ID copied to clipboard"));
+            },
+            child: TextFormField(
+              controller: model.serverId,
+              readOnly: true,
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                  ),
+                ),
+                filled: true,
+                fillColor: Theme.of(context).scaffoldBackgroundColor,
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                suffixIcon: Icon(
+                  Icons.copy,
+                  color: Theme.of(context).iconTheme.color?.withOpacity(0.5),
+                ),
+              ),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.medium,
+                letterSpacing: 1.2,
+              ),
+              textAlign: TextAlign.center,
+            ).workaroundFreezeLinuxMint(),
+          ),
+          Text(
+            "Double tap to copy",
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).textTheme.caption?.color,
+            ),
+            textAlign: TextAlign.center,
+          ).marginOnly(top: 8),
         ],
       ),
     );
@@ -262,11 +185,11 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         children: [
           Column(
             children: [
-              if (!isOutgoingOnly)
+               if (!isOutgoingOnly)
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    translate("identification code"),
+                    "本设备识别码",
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -277,7 +200,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
           if (!isOutgoingOnly)
             Text(
-              translate("Please inform the technical personnel of the identification code"),
+              "请将下方识别码告知客服",
               overflow: TextOverflow.clip,
               style: Theme.of(context).textTheme.bodySmall,
             ),
