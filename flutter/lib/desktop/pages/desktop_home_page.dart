@@ -121,50 +121,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     return ChangeNotifierProvider.value(
       value: gFFI.serverModel,
       child: Container(
-        width: isIncomingOnly ? 280.0 : 200.0,
+        width: isIncomingOnly ? 320.0 : 300.0, // 增加宽度
         color: Theme.of(context).colorScheme.background,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                SingleChildScrollView(
-                  controller: _rightPaneScrollController,
-                  child: Column(
-                    key: _childKey,
-                    children: children,
-                  ),
-                ),
-                Expanded(child: Container())
-              ],
-            ),
-            if (isOutgoingOnly)
-              Positioned(
-                bottom: 6,
-                left: 12,
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    child: Obx(
-                      () => Icon(
-                        Icons.settings,
-                        color: _editHover.value
-                            ? textColor
-                            : Colors.grey.withOpacity(0.5),
-                        size: 22,
-                      ),
-                    ),
-                    onTap: () => {
-                      if (DesktopSettingPage.tabKeys.isNotEmpty)
-                        {
-                          DesktopSettingPage.switch2page(
-                              DesktopSettingPage.tabKeys[0])
-                        }
-                    },
-                    onHover: (value) => _editHover.value = value,
-                  ),
-                ),
-              )
-          ],
+        child: SingleChildScrollView( // 移除多余的Stack和Expanded，避免空白
+          controller: _rightPaneScrollController,
+          child: Column(
+            key: _childKey,
+            children: children,
+          ),
         ),
       ),
     );
@@ -173,7 +137,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
     return Container(
-      margin: const EdgeInsets.only(left: 20, right: 11),
+      margin: const EdgeInsets.only(left: 40, right: 11), // 增加左边距，右移ID区域
       height: 57,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -280,7 +244,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
     return Container(
-      margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
+      margin: EdgeInsets.only(left: 40.0, right: 16, top: 13, bottom: 13), // 增加左边距，右移密码区域
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.baseline,
         textBaseline: TextBaseline.alphabetic,
@@ -375,7 +339,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding:
-          const EdgeInsets.only(left: 20.0, right: 16, top: 16.0, bottom: 5),
+          const EdgeInsets.only(left: 40.0, right: 16, top: 16.0, bottom: 5), // 增加左边距，右移提示文本
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,98 +510,83 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       }
     }
 
-    return Stack(
-      children: [
-        Container(
-          margin: EdgeInsets.fromLTRB(
-              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
-          child: Container(
-              decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color.fromARGB(255, 226, 66, 188),
-                  Color.fromARGB(255, 244, 114, 124),
-                ],
-              )),
-              padding: EdgeInsets.all(20),
-              child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: (title.isNotEmpty
-                          ? <Widget>[
-                              Center(
-                                  child: Text(
-                                translate(title),
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15),
-                              ).marginOnly(bottom: 6)),
-                            ]
-                          : <Widget>[]) +
-                      <Widget>[
-                        if (content.isNotEmpty)
-                          Text(
-                            translate(content),
+    return Container( // 移除Stack，避免不必要的空白
+      margin: EdgeInsets.fromLTRB(
+          20, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0), // 增加左边距
+      child: Container(
+          decoration: BoxDecoration(
+              gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Color.fromARGB(255, 226, 66, 188),
+              Color.fromARGB(255, 244, 114, 124),
+            ],
+          )),
+          padding: EdgeInsets.all(20),
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: (title.isNotEmpty
+                      ? <Widget>[
+                          Center(
+                              child: Text(
+                            translate(title),
                             style: TextStyle(
-                                height: 1.5,
                                 color: Colors.white,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 13),
-                          ).marginOnly(bottom: 20)
-                      ] +
-                      (btnText.isNotEmpty
-                          ? <Widget>[
-                              Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    FixedWidthButton(
-                                      width: 150,
-                                      padding: 8,
-                                      isOutline: true,
-                                      text: translate(btnText),
-                                      textColor: Colors.white,
-                                      borderColor: Colors.white,
-                                      textSize: 20,
-                                      radius: 10,
-                                      onTap: onPressed,
-                                    )
-                                  ])
-                            ]
-                          : <Widget>[]) +
-                      (help != null
-                          ? <Widget>[
-                              Center(
-                                  child: InkWell(
-                                      onTap: () async =>
-                                          await launchUrl(Uri.parse(link!)),
-                                      child: Text(
-                                        translate(help),
-                                        style: TextStyle(
-                                            decoration:
-                                                TextDecoration.underline,
-                                            color: Colors.white,
-                                            fontSize: 12),
-                                      )).marginOnly(top: 6)),
-                            ]
-                          : <Widget>[]))),
-        ),
-        if (closeButton != null && closeButton == true)
-          Positioned(
-            top: 18,
-            right: 0,
-            child: IconButton(
-              icon: Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 20,
-              ),
-              onPressed: closeCard,
-            ),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15),
+                          ).marginOnly(bottom: 6)),
+                        ]
+                      : <Widget>[]) +
+                  <Widget>[
+                    if (content.isNotEmpty)
+                      Text(
+                        translate(content),
+                        style: TextStyle(
+                            height: 1.5,
+                            color: Colors.white,
+                            fontWeight: FontWeight.normal,
+                            fontSize: 13),
+                      ).marginOnly(bottom: 20)
+                  ] +
+                  (btnText.isNotEmpty
+                      ? <Widget>[
+                          Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                FixedWidthButton(
+                                  width: 150,
+                                  padding: 8,
+                                  isOutline: true,
+                                  text: translate(btnText),
+                                  textColor: Colors.white,
+                                  borderColor: Colors.white,
+                                  textSize: 20,
+                                  radius: 10,
+                                  onTap: onPressed,
+                                )
+                              ])
+                        ]
+                      : <Widget>[]) +
+                  (help != null
+                      ? <Widget>[
+                          Center(
+                              child: InkWell(
+                                  onTap: () async =>
+                                      await launchUrl(Uri.parse(link!)),
+                                  child: Text(
+                                    translate(help),
+                                    style: TextStyle(
+                                        decoration:
+                                            TextDecoration.underline,
+                                        color: Colors.white,
+                                        fontSize: 12),
+                                  )).marginOnly(top: 6)),
+                        ]
+                      : <Widget>[])),
           ),
-      ],
+        ),
     );
   }
 
