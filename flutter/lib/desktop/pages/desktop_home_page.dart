@@ -166,7 +166,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   Container(
                     height: 25,
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -179,7 +179,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                   ?.color
                                   ?.withOpacity(0.5)),
                         ).marginOnly(top: 5),
-                        buildPopupMenu(context)
                       ],
                     ),
                   ),
@@ -212,10 +211,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  Widget buildPopupMenu(BuildContext context) {
-    // 移除设置按钮，返回空容器
-    return Container();
-  }
+  // 完全移除设置菜单相关函数
 
   buildPasswordBoard(BuildContext context) {
     // 移除密码面板，返回空容器
@@ -588,6 +584,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     rustDeskWinManager.setMethodHandler((call, fromWindowId) async {
       debugPrint(
           "[Main] call ${call.method} with args ${call.arguments} from window $fromWindowId");
+      // 只保留必要的窗口管理功能，移除可能触发设置菜单的功能
       if (call.method == kWindowMainWindowOnTop) {
         windowOnTop(null);
       } else if (call.method == kWindowGetWindowInfo) {
@@ -606,52 +603,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         await rustDeskWinManager.registerActiveWindow(call.arguments["id"]);
       } else if (call.method == kWindowEventHide) {
         await rustDeskWinManager.unregisterActiveWindow(call.arguments['id']);
-      } else if (call.method == kWindowConnect) {
-        await connectMainDesktop(
-          call.arguments['id'],
-          isFileTransfer: call.arguments['isFileTransfer'],
-          isViewCamera: call.arguments['isViewCamera'],
-          isTerminal: call.arguments['isTerminal'],
-          isTcpTunneling: call.arguments['isTcpTunneling'],
-          isRDP: call.arguments['isRDP'],
-          password: call.arguments['password'],
-          forceRelay: call.arguments['forceRelay'],
-          connToken: call.arguments['connToken'],
-        );
-      } else if (call.method == kWindowEventMoveTabToNewWindow) {
-        final args = call.arguments.split(',');
-        int? windowId;
-        try {
-          windowId = int.parse(args[0]);
-        } catch (e) {
-          debugPrint("Failed to parse window id '${call.arguments}': $e");
-        }
-        WindowType? windowType;
-        try {
-          windowType = WindowType.values.byName(args[3]);
-        } catch (e) {
-          debugPrint("Failed to parse window type '${call.arguments}': $e");
-        }
-        if (windowId != null && windowType != null) {
-          await rustDeskWinManager.moveTabToNewWindow(
-              windowId, args[1], args[2], windowType);
-        }
-      } else if (call.method == kWindowEventOpenMonitorSession) {
-        final args = jsonDecode(call.arguments);
-        final windowId = args['window_id'] as int;
-        final peerId = args['peer_id'] as String;
-        final display = args['display'] as int;
-        final displayCount = args['display_count'] as int;
-        final windowType = args['window_type'] as int;
-        final screenRect = parseParamScreenRect(args);
-        await rustDeskWinManager.openMonitorSession(
-            windowId, peerId, display, displayCount, screenRect, windowType);
-      } else if (call.method == kWindowEventRemoteWindowCoords) {
-        final windowId = int.tryParse(call.arguments);
-        if (windowId != null) {
-          return jsonEncode(
-              await rustDeskWinManager.getOtherRemoteWindowCoords(windowId));
-        }
       }
     });
     _uniLinksSubscription = listenUniLinks();
