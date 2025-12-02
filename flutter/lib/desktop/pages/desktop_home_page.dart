@@ -102,34 +102,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ),
       buildPluginEntry(),
     ];
-    // 移除状态栏功能按键
     if (isIncomingOnly) {
       children.addAll([
         Divider(),
-        // 只保留退出按钮
-        Align(
-          alignment: Alignment.center,
-          child: OutlinedButton(
-            onPressed: () {
-              SystemNavigator.pop();
-              if (isWindows) {
-                exit(0);
-              }
-            },
-            style: OutlinedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: Text(
-              '退出',
-              style: TextStyle(
-                fontSize: 16,
-              ),
-            ),
-          ),
-        ).marginAll(14)
+        OnlineStatusWidget(
+          onSvcStatusChanged: () {
+            if (isInHomePage()) {
+              Future.delayed(Duration(milliseconds: 300), () {
+                _updateWindowSize();
+              });
+            }
+          },
+        ).marginOnly(bottom: 6, right: 6)
       ]);
     }
     return ChangeNotifierProvider.value(
@@ -254,7 +238,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    "本设备识别码",
+                    translate("Your Desktop"),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -265,7 +249,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
           if (!isOutgoingOnly)
             Text(
-              "请将下方识别码告知客服",
+              translate("desk_tip"),
               overflow: TextOverflow.clip,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -281,7 +265,131 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 
   Widget buildHelpCards(String updateUrl) {
-    // 移除所有帮助卡片，保持界面简洁
+    if (!bind.isCustomClient() &&
+        updateUrl.isNotEmpty &&
+        !isCardClosed &&
+        bind.mainUriPrefixSync().contains('rustdesk')) {
+      final isToUpdate = (isWindows || isMacOS) && bind.mainIsInstalled();
+      String btnText = isToUpdate ? 'Update' : 'Download';
+      GestureTapCallback onPressed = () async {
+        final Uri url = Uri.parse('https://rustdesk.com/download');
+        await launchUrl(url);
+      };
+      if (isToUpdate) {
+        onPressed = () {
+          handleUpdate(updateUrl);
+        };
+      }
+      return buildInstallCard(
+          "Status",
+          "${translate("new-version-of-{${bind.mainGetAppNameSync()}}-tip")} (${bind.mainGetNewVersion()}).",
+          btnText,
+          onPressed,
+          closeButton: true);
+    }
+    if (systemError.isNotEmpty) {
+      return buildInstallCard("", systemError, "", () {});
+    }
+
+    if (isWindows && !bind.isDisableInstallation()) {
+      if (!bind.mainIsInstalled()) {
+        return buildInstallCard(
+            "", bind.isOutgoingOnly() ? "" : "install_tip", "Install",
+            () async {
+          await rustDeskWinManager.closeAllSubWindows();
+          bind.mainGotoInstall();
+        });
+      } else if (bind.mainIsInstalledLowerVersion()) {
+        return buildInstallCard(
+            "Status", "Your installation is lower version.", "Click to upgrade",
+            () async {
+          await rustDeskWinManager.closeAllSubWindows();
+          bind.mainUpdateMe();
+        });
+      }
+    } else if (isMacOS) {
+      final isOutgoingOnly = bind.isOutgoingOnly();
+      if (!(isOutgoingOnly || bind.mainIsCanScreenRecording(prompt: false))) {
+        return buildInstallCard("Permissions", "config_screen", "Configure",
+            () async {
+          bind.mainIsCanScreenRecording(prompt: true);
+          watchIsCanScreenRecording = true;
+        }, help: 'Help', link: translate("doc_mac_permission"));
+      } else if (!isOutgoingOnly && !bind.mainIsProcessTrusted(prompt: false)) {
+        return buildInstallCard("Permissions", "config_acc", "Configure",
+            () async {
+          bind.mainIsProcessTrusted(prompt: true);
+          watchIsProcessTrust = true;
+        }, help: 'Help', link: translate("doc_mac_permission"));
+      } else if (!bind.mainIsCanInputMonitoring(prompt: false)) {
+        return buildInstallCard("Permissions", "config_input", "Configure",
+            () async {
+          bind.mainIsCanInputMonitoring(prompt: true);
+          watchIsInputMonitoring = true;
+        }, help: 'Help', link: translate("doc_mac_permission"));
+      } else if (!isOutgoingOnly &&
+          !svcStopped.value &&
+          bind.mainIsInstalled() &&
+          !bind.mainIsInstalledDaemon(prompt: false)) {
+        return buildInstallCard("", "install_daemon_tip", "Install", () async {
+          bind.mainIsInstalledDaemon(prompt: true);
+        });
+      }
+    } else if (isLinux) {
+      if (bind.isOutgoingOnly()) {
+        return Container();
+      }
+      final LinuxCards = <Widget>[];
+      if (bind.isSelinuxEnforcing()) {
+        final keyShowSelinuxHelpTip = "show-selinux-help-tip";
+        if (bind.mainGetLocalOption(key: keyShowSelinuxHelpTip) != 'N') {
+          LinuxCards.add(buildInstallCard(
+            "Warning",
+            "selinux_tip",
+            "",
+            () async {},
+            marginTop: LinuxCards.isEmpty ? 20.0 : 5.0,
+            help: 'Help',
+            link:
+                'https://rustdesk.com/docs/en/client/linux/#permissions-issue',
+            closeButton: true,
+            closeOption: keyShowSelinuxHelpTip,
+          ));
+        }
+      }
+      if (bind.mainCurrentIsWayland()) {
+        LinuxCards.add(buildInstallCard(
+            "Warning", "wayland_experiment_tip", "", () async {},
+            marginTop: LinuxCards.isEmpty ? 20.0 : 5.0,
+            help: 'Help',
+            link: 'https://rustdesk.com/docs/en/client/linux/#x11-required'));
+      } else if (bind.mainIsLoginWayland()) {
+        LinuxCards.add(buildInstallCard("Warning",
+            "Login screen using Wayland is not supported", "", () async {},
+            marginTop: LinuxCards.isEmpty ? 20.0 : 5.0,
+            help: 'Help',
+            link: 'https://rustdesk.com/docs/en/client/linux/#login-screen'));
+      }
+      if (LinuxCards.isNotEmpty) {
+        return Column(
+          children: LinuxCards,
+        );
+      }
+    }
+    if (bind.isIncomingOnly()) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: OutlinedButton(
+          onPressed: () {
+            SystemNavigator.pop();
+            if (isWindows) {
+              exit(0);
+            }
+          },
+          child: Text(translate('Quit')),
+        ),
+      ).marginAll(14);
+    }
     return Container();
   }
 
@@ -500,14 +608,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     _uniLinksSubscription = listenUniLinks();
 
     if (bind.isIncomingOnly()) {
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        // 禁止窗口拉伸
-        await windowManager.setResizable(false);
-        // 隐藏最大化按钮（Windows和macOS）
-        await windowManager.setMaximizable(false);
-        // 禁止全屏功能
-        await windowManager.setFullScreen(false);
-        // 设置窗口大小
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         _updateWindowSize();
       });
     }
