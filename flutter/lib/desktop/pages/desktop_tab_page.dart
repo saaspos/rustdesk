@@ -8,7 +8,6 @@ import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
-// import 'package:flutter/services.dart';
 
 import '../../common/shared_state.dart';
 
@@ -52,45 +51,42 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
         page: DesktopHomePage(
           key: const ValueKey(kTabLabelHomePage),
         )));
-    if (bind.isIncomingOnly()) {
-      tabController.onSelected = (key) {
-        if (key == kTabLabelHomePage) {
-          windowManager.setSize(getIncomingOnlyHomeSize());
-          setResizable(false);
-        } else {
-          windowManager.setSize(getIncomingOnlySettingsSize());
-          setResizable(true);
-        }
-      };
+    
+    // 初始化窗口设置 - 禁用调整大小、全屏和最大化功能
+    _initWindowSettings();
+  }
+
+  /// 初始化窗口设置，禁用调整大小、全屏和最大化功能
+  Future<void> _initWindowSettings() async {
+    try {
+      // 1. 禁用窗口大小调整
+      await windowManager.setResizable(false);
+      
+      // 2. 设置窗口不可最大化
+      await windowManager.setMaximizable(false);
+      
+      // 3. 设置窗口不可全屏
+      await windowManager.setFullScreenable(false);
+      
+      // 4. 设置窗口最小尺寸和最大尺寸相同，确保固定大小
+      final currentSize = await windowManager.getSize();
+      await windowManager.setMinimumSize(currentSize);
+      await windowManager.setMaximumSize(currentSize);
+      
+      debugPrint('窗口设置已应用: 禁用调整大小、禁用最大化、禁用全屏');
+    } catch (e) {
+      debugPrint('设置窗口属性时出错: $e');
     }
   }
 
   @override
   void initState() {
     super.initState();
-    // 禁用窗口拉伸、最大化、最小化和全屏功能
-    windowManager.setResizable(false);
-    windowManager.setMaximizable(false);
-    windowManager.setMinimizable(false);
-    windowManager.setFullScreenable(false);
-    // HardwareKeyboard.instance.addHandler(_handleKeyEvent);
   }
-
-  /*
-  bool _handleKeyEvent(KeyEvent event) {
-    if (!mouseIn && event is KeyDownEvent) {
-      print('key down: ${event.logicalKey}');
-      shouldBeBlocked(_block, canBeBlocked);
-    }
-    return false; // allow it to propagate
-  }
-  */
 
   @override
   void dispose() {
-    // HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     Get.delete<DesktopTabController>();
-
     super.dispose();
   }
 
@@ -111,14 +107,69 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                 ),
               ),
             )));
-    return isMacOS || kUseCompatibleUiMode
-        ? tabWidget
-        : Obx(
-            () => DragToResizeArea(
-              resizeEdgeSize: stateGlobal.resizeEdgeSize.value,
-              enableResizeEdges: windowManagerEnableResizeEdges,
-              child: tabWidget,
-            ),
-          );
+    
+    // 移除DragToResizeArea，因为我们不再允许调整窗口大小
+    return tabWidget;
+  }
+}
+
+// 窗口管理器配置示例 - 通常在main.dart中配置
+class WindowManagerConfig {
+  static Future<void> init() async {
+    // 确保窗口管理器已初始化
+    await windowManager.ensureInitialized();
+    
+    // 配置窗口选项
+    WindowOptions windowOptions = WindowOptions(
+      size: Size(800, 600), // 设置初始窗口大小
+      center: true, // 窗口居中显示
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+      // 注意：这里不设置resizable、maximizable、fullScreenable
+      // 这些将在DesktopTabPage中动态设置
+    );
+    
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
+}
+
+// 平台特定的窗口处理辅助方法
+class WindowHelper {
+  /// 获取固定大小的窗口尺寸
+  static Size getFixedWindowSize() {
+    // 根据不同平台返回合适的固定窗口大小
+    if (isWindows) {
+      return Size(800, 600);
+    } else if (isMacOS) {
+      return Size(800, 600);
+    } else if (isLinux) {
+      return Size(800, 600);
+    }
+    return Size(800, 600); // 默认大小
+  }
+  
+  /// 应用固定窗口设置
+  static Future<void> applyFixedWindowSettings() async {
+    final fixedSize = getFixedWindowSize();
+    
+    // 设置窗口大小
+    await windowManager.setSize(fixedSize);
+    
+    // 禁用调整大小
+    await windowManager.setResizable(false);
+    
+    // 禁用最大化
+    await windowManager.setMaximizable(false);
+    
+    // 禁用全屏
+    await windowManager.setFullScreenable(false);
+    
+    // 设置最小和最大尺寸相同
+    await windowManager.setMinimumSize(fixedSize);
+    await windowManager.setMaximumSize(fixedSize);
   }
 }
