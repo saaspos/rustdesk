@@ -68,6 +68,10 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
   @override
   void initState() {
     super.initState();
+    // 禁用窗口拉伸、最大化和最小化功能
+    windowManager.setResizable(false);
+    windowManager.setMaximizable(false);
+    windowManager.setMinimizable(false);
     // HardwareKeyboard.instance.addHandler(_handleKeyEvent);
   }
 
