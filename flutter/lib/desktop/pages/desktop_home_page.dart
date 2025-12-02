@@ -505,6 +505,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         await windowManager.setResizable(false);
         // 隐藏最大化按钮（Windows和macOS）
         await windowManager.setMaximizable(false);
+        // 禁止全屏功能
+        await windowManager.setFullScreen(false);
         // 设置窗口大小
         _updateWindowSize();
       });
