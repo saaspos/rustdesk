@@ -8,7 +8,6 @@ import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
 import 'package:get/get.dart';
 import 'package:window_manager/window_manager.dart';
-// import 'package:flutter/services.dart';
 
 import '../../common/shared_state.dart';
 
@@ -52,40 +51,54 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
         page: DesktopHomePage(
           key: const ValueKey(kTabLabelHomePage),
         )));
+    
+    // 初始化窗口设置 - 禁止调整大小并隐藏最大化按钮
+    _setupWindowConstraints();
+    
     if (bind.isIncomingOnly()) {
       tabController.onSelected = (key) {
         if (key == kTabLabelHomePage) {
           windowManager.setSize(getIncomingOnlyHomeSize());
-          setResizable(false);
+          // 保持不可调整大小
         } else {
           windowManager.setSize(getIncomingOnlySettingsSize());
-          setResizable(true);
+          // 保持不可调整大小
         }
       };
+    }
+  }
+  
+  /// 设置窗口约束 - 禁止调整大小并隐藏最大化按钮
+  void _setupWindowConstraints() async {
+    try {
+      // 禁止调整窗口大小
+      await windowManager.setResizable(false);
+      
+      // 隐藏最大化按钮
+      await windowManager.setMaximizable(false);
+      
+      // 可选：设置最小窗口大小（与当前大小相同）
+      final currentSize = await windowManager.getSize();
+      await windowManager.setMinimumSize(currentSize);
+      
+      debugPrint('Window constraints applied: resizable=false, maximizable=false');
+    } catch (e) {
+      debugPrint('Failed to apply window constraints: $e');
     }
   }
 
   @override
   void initState() {
     super.initState();
-    // HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+    // 确保窗口约束在初始化后生效
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupWindowConstraints();
+    });
   }
-
-  /*
-  bool _handleKeyEvent(KeyEvent event) {
-    if (!mouseIn && event is KeyDownEvent) {
-      print('key down: ${event.logicalKey}');
-      shouldBeBlocked(_block, canBeBlocked);
-    }
-    return false; // allow it to propagate
-  }
-  */
 
   @override
   void dispose() {
-    // HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
     Get.delete<DesktopTabController>();
-
     super.dispose();
   }
 
@@ -97,7 +110,7 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
             body: DesktopTab(
               controller: tabController,
               tail: Offstage(
-                offstage: true, // 始终隐藏设置按钮
+                offstage: bind.isIncomingOnly() || bind.isDisableSettings(),
                 child: ActionIcon(
                   message: 'Settings',
                   icon: IconFont.menu,
@@ -106,14 +119,8 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
                 ),
               ),
             )));
-    return isMacOS || kUseCompatibleUiMode
-        ? tabWidget
-        : Obx(
-            () => DragToResizeArea(
-              resizeEdgeSize: stateGlobal.resizeEdgeSize.value,
-              enableResizeEdges: windowManagerEnableResizeEdges,
-              child: tabWidget,
-            ),
-          );
+    
+    // 移除拖拽调整大小区域，因为窗口大小已被固定
+    return tabWidget;
   }
 }
