@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hbb/common.dart';
 import 'package:flutter_hbb/consts.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
-import 'package:flutter_hbb/desktop/pages/desktop_setting_page.dart';
 import 'package:flutter_hbb/desktop/widgets/tabbar_widget.dart';
 import 'package:flutter_hbb/models/platform_model.dart';
 import 'package:flutter_hbb/models/state_model.dart';
@@ -16,24 +15,6 @@ class DesktopTabPage extends StatefulWidget {
 
   @override
   State<DesktopTabPage> createState() => _DesktopTabPageState();
-
-  static void onAddSetting(
-      {SettingsTabKey initialPage = SettingsTabKey.general}) {
-    try {
-      DesktopTabController tabController = Get.find<DesktopTabController>();
-      tabController.add(TabInfo(
-          key: kTabLabelSettingPage,
-          label: kTabLabelSettingPage,
-          selectedIcon: Icons.build_sharp,
-          unselectedIcon: Icons.build_outlined,
-          page: DesktopSettingPage(
-            key: const ValueKey(kTabLabelSettingPage),
-            initialTabkey: initialPage,
-          )));
-    } catch (e) {
-      debugPrintStack(label: '$e');
-    }
-  }
 }
 
 class _DesktopTabPageState extends State<DesktopTabPage> {
@@ -52,47 +33,68 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
           key: const ValueKey(kTabLabelHomePage),
         )));
     
-    // 初始化窗口设置 - 禁止调整大小并隐藏最大化按钮
-    _setupWindowConstraints();
+    // 初始化窗口设置 - 最小化窗口并仅显示左侧内容
+    _setupMinimizedWindow();
     
     if (bind.isIncomingOnly()) {
       tabController.onSelected = (key) {
         if (key == kTabLabelHomePage) {
-          windowManager.setSize(getIncomingOnlyHomeSize());
+          windowManager.setSize(getMinimizedWindowSize());
           // 保持不可调整大小
         } else {
-          windowManager.setSize(getIncomingOnlySettingsSize());
+          windowManager.setSize(getMinimizedWindowSize());
           // 保持不可调整大小
         }
       };
     }
   }
   
-  /// 设置窗口约束 - 禁止调整大小并隐藏最大化按钮
-  void _setupWindowConstraints() async {
+  /// 获取最小化窗口大小 - 仅显示左侧内容区域
+  Size getMinimizedWindowSize() {
+    // 设置为紧凑的宽度，适合仅显示左侧内容
+    // 宽度设为280像素，高度设为600像素，适合大多数桌面应用的侧边栏布局
+    return const Size(280, 600);
+  }
+  
+  /// 设置最小化窗口 - 仅显示左侧内容区域
+  void _setupMinimizedWindow() async {
     try {
-      // 禁止调整窗口大小
-      await windowManager.setResizable(false);
+      // 获取最小化窗口大小
+      final minimizedSize = getMinimizedWindowSize();
+      
+      // 设置窗口大小为最小化尺寸
+      await windowManager.setSize(minimizedSize);
+      debugPrint('Window size set to minimized: $minimizedSize');
       
       // 隐藏最大化按钮
       await windowManager.setMaximizable(false);
+      debugPrint('Maximize button hidden');
       
-      // 可选：设置最小窗口大小（与当前大小相同）
-      final currentSize = await windowManager.getSize();
-      await windowManager.setMinimumSize(currentSize);
+      // 禁止调整窗口大小
+      await windowManager.setResizable(false);
+      debugPrint('Window resizing disabled');
       
-      debugPrint('Window constraints applied: resizable=false, maximizable=false');
+      // 设置最小和最大窗口大小，确保窗口保持固定尺寸
+      await windowManager.setMinimumSize(minimizedSize);
+      await windowManager.setMaximumSize(minimizedSize);
+      debugPrint('Window size fixed to minimized dimensions');
+      
+      // 确保窗口不能全屏
+      await windowManager.setFullScreen(false);
+      debugPrint('Full screen mode disabled');
+      
+      debugPrint('Minimized window setup completed successfully');
     } catch (e) {
-      debugPrint('Failed to apply window constraints: $e');
+      debugPrint('Failed to setup minimized window: $e');
     }
   }
 
   @override
   void initState() {
     super.initState();
-    // 确保窗口约束在初始化后生效
+    // 确保最小化窗口设置在初始化后生效
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setupWindowConstraints();
+      _setupMinimizedWindow();
     });
   }
 
@@ -105,18 +107,20 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
   @override
   Widget build(BuildContext context) {
     final tabWidget = Container(
+        // 添加约束，确保内容适应最小化窗口
+        constraints: BoxConstraints(
+          minWidth: 280,
+          maxWidth: 280,
+        ),
         child: Scaffold(
             backgroundColor: Theme.of(context).colorScheme.background,
-            body: DesktopTab(
-              controller: tabController,
-              tail: Offstage(
-                offstage: bind.isIncomingOnly() || bind.isDisableSettings(),
-                child: ActionIcon(
-                  message: 'Settings',
-                  icon: IconFont.menu,
-                  onTap: DesktopTabPage.onAddSetting,
-                  isClose: false,
-                ),
+            // 移除不必要的内边距，最大化可用空间
+            body: Padding(
+              padding: EdgeInsets.zero,
+              child: DesktopTab(
+                controller: tabController,
+                // 配置标签栏为紧凑模式
+                compactMode: true,
               ),
             )));
     
