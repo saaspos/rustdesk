@@ -1,5 +1,8 @@
 name: flutter_hbb
 description: Your Remote Desktop Software
+flutter:
+  uses-material-design: true
+  android_package_name: cn.desk.pcpos.cn.app  # 新包名
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `pub publish`. This is preferred for private packages.
