@@ -37,7 +37,7 @@ class DesktopTabPage extends StatefulWidget {
   }
 }
 
-class _DesktopTabPageState extends State<DesktopTabPage> {
+class _DesktopTabPageState extends State<DesktopTabPage> with WindowListener {
   final tabController = DesktopTabController(tabType: DesktopTabType.main);
 
   _DesktopTabPageState() {
@@ -69,6 +69,24 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
   void initState() {
     super.initState();
     // HardwareKeyboard.instance.addHandler(_handleKeyEvent);
+    
+    // 初始化窗口管理器并添加监听器
+    _initWindowManager();
+  }
+
+  Future<void> _initWindowManager() async {
+    // 添加窗口监听器
+    windowManager.addListener(this);
+    
+    // 阻止默认的关闭行为
+    await windowManager.setPreventClose(true);
+    
+    // 根据平台设置应用程序行为
+    if (isMacOS) {
+      // macOS特定设置
+      // 确保应用程序在最后一个窗口关闭后仍能继续运行
+      // 这需要在macOS的AppDelegate中设置applicationShouldTerminateAfterLastWindowClosed返回false
+    }
   }
 
   /*
@@ -84,9 +102,24 @@ class _DesktopTabPageState extends State<DesktopTabPage> {
   @override
   void dispose() {
     // HardwareKeyboard.instance.removeHandler(_handleKeyEvent);
+    windowManager.removeListener(this);
     Get.delete<DesktopTabController>();
 
     super.dispose();
+  }
+
+  @override
+  void onWindowClose() async {
+    // 当用户点击关闭按钮时，隐藏窗口而不是关闭应用
+    debugPrint('Window close button clicked, hiding to background');
+    
+    // 隐藏窗口到后台
+    if (await windowManager.isVisible()) {
+      await windowManager.hide();
+    }
+    
+    // 返回true表示我们已经处理了关闭事件，不需要系统继续处理
+    // 由于我们设置了setPreventClose(true)，系统不会真正关闭窗口
   }
 
   @override
